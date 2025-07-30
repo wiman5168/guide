@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>捷運視障旅客引導通報系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        #loginScreen {
+            height: 100vh;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(1.02);
+            }
+        }
+        .pulse-alert {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            border: 2px solid #ef4444; /* red-500 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="flex flex-col justify-center items-center p-4">
+        <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+            <h1 class="text-3xl font-bold text-center text-blue-600 mb-8">系統登入</h1>
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="employeeId" class="block text-sm font-medium text-gray-700">員工編號</label>
+                    <input type="text" id="employeeId" required class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="請輸入您的員工編號">
+                </div>
+                <div>
+                    <label for="loginStationSelector" class="block text-sm font-medium text-gray-700">所在車站</label>
+                    <select id="loginStationSelector" required class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">請選擇您所在的車站</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 text-lg">
+                    登入
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Container (hidden by default) -->
+    <div id="app" class="container mx-auto p-4 max-w-7xl hidden">
+
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow p-4 mb-6 flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-bold text-blue-600">視障旅客引導通報系統</h1>
+            <div id="userInfo" class="mt-4 md:mt-0 text-right">
+                <!-- User info will be populated by JS -->
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Column: Create Notification Form -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-bold mb-4 border-b pb-2">發起新的引導通報</h2>
+                <form id="notificationForm" class="space-y-4">
+                    <div>
+                        <label for="endStation" class="block text-sm font-medium text-gray-700">目的地車站</label>
+                        <select id="endStation" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="arrivalHour" class="block text-sm font-medium text-gray-700">預計抵達時間</label>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <select id="arrivalHour" required class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" aria-label="小時"></select>
+                            <span class="font-bold text-gray-500">:</span>
+                            <select id="arrivalMinute" required class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" aria-label="分鐘"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="carPosition" class="block text-sm font-medium text-gray-700">車廂位置</label>
+                        <div class="flex space-x-2 mt-1">
+                            <select id="carNumber" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="1">1號車</option><option value="2">2號車</option><option value="3">3號車</option><option value="4">4號車</option>
+                            </select>
+                            <select id="doorNumber" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="1">1號門</option><option value="2">2號門</option><option value="3">3號門</option><option value="4">4號門</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="passengerFeatures" class="block text-sm font-medium text-gray-700">旅客特徵</label>
+                        <textarea id="passengerFeatures" rows="3" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="例如：男性，約50歲，穿藍色外套，持白色手杖"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300">
+                        送出通報
+                    </button>
+                </form>
+            </div>
+
+            <!-- Right Column: Notifications List -->
+            <div class="lg:col-span-2">
+                <h2 class="text-xl font-bold mb-4">待處理引導任務</h2>
+                <div id="notificationsList" class="space-y-4">
+                    <!-- Notifications will be dynamically inserted here -->
+                    <div id="noNotificationsMessage" class="bg-white p-6 rounded-lg shadow text-center text-gray-500">
+                        目前沒有待處理的引導任務。
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for notification alert -->
+    <div id="alertModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">緊急通報！</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500" id="modal-text">您有新的視障旅客引導任務，請立即確認！</p>
+            </div>
+            <div class="mt-4">
+                <button id="modalCloseButton" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    知道了
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for confirmation -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
+            <h3 class="text-lg font-medium text-gray-900" id="confirmModalTitle">確定操作</h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500" id="confirmModalText">您確定要執行此操作嗎？</p>
+            </div>
+            <div class="mt-5 sm:mt-6 flex justify-end space-x-3">
+                <button id="confirmCancelButton" type="button" class="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+                    取消
+                </button>
+                <button id="confirmActionButton" type="button" class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none">
+                    確定
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Firebase v11.6.1
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Use environment variables for Firebase config and auth
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        
+        // --- App State ---
+        let db;
+        let auth;
+        let currentStation = null;
+        let currentEmployeeId = null;
+        let confirmCallback = null;
+        const stations = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10', 'A11', 'A12', 'A13', 'A14a', 'A15', 'A16', 'A17', 'A18', 'A19', 'A20', 'A21', 'A22'];
+        const pendingAlerts = new Map(); // Stores interval IDs for pending notifications
+        const alertSound = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+        alertSound.loop = true;
+
+        // --- UI Elements ---
+        const loginScreen = document.getElementById('loginScreen');
+        const appScreen = document.getElementById('app');
+        const loginForm = document.getElementById('loginForm');
+        const employeeIdInput = document.getElementById('employeeId');
+        const loginStationSelector = document.getElementById('loginStationSelector');
+        const userInfoDiv = document.getElementById('userInfo');
+        
+        const notificationForm = document.getElementById('notificationForm');
+        const endStationSelector = document.getElementById('endStation');
+        const arrivalHourSelector = document.getElementById('arrivalHour');
+        const arrivalMinuteSelector = document.getElementById('arrivalMinute');
+        const notificationsList = document.getElementById('notificationsList');
+        const noNotificationsMessage = document.getElementById('noNotificationsMessage');
+        const alertModal = document.getElementById('alertModal');
+        const modalText = document.getElementById('modal-text');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmModalText = document.getElementById('confirmModalText');
+        const confirmCancelButton = document.getElementById('confirmCancelButton');
+        const confirmActionButton = document.getElementById('confirmActionButton');
+
+        // --- Initialization ---
+        async function initializeAppLogic() {
+            try {
+                if (!firebaseConfig.apiKey) {
+                    alert("Firebase 設定缺失。無法初始化應用程式。");
+                    return;
+                }
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                setupUI();
+
+            } catch (error) {
+                console.error("Firebase initialization or auth failed:", error);
+                alert(`應用程式初始化失敗: ${error.message}`);
+            }
+        }
+
+        function setupUI() {
+            // Populate station selectors
+            stations.forEach(station => {
+                loginStationSelector.add(new Option(station, station));
+                endStationSelector.add(new Option(station, station));
+            });
+
+            // Populate time selectors
+            for (let i = 0; i < 24; i++) {
+                const value = i.toString().padStart(2, '0');
+                arrivalHourSelector.add(new Option(value, value));
+            }
+            for (let i = 0; i < 60; i++) {
+                const value = i.toString().padStart(2, '0');
+                arrivalMinuteSelector.add(new Option(value, value));
+            }
+
+            // Add event listeners
+            loginForm.addEventListener('submit', handleLogin);
+            notificationForm.addEventListener('submit', handleFormSubmit);
+            modalCloseButton.addEventListener('click', hideAlertModal);
+            confirmCancelButton.addEventListener('click', () => confirmModal.classList.add('hidden'));
+            confirmActionButton.addEventListener('click', () => {
+                if (confirmCallback) {
+                    confirmCallback();
+                }
+                confirmModal.classList.add('hidden');
+            });
+        }
+
+        // --- Event Handlers ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const employeeId = employeeIdInput.value.trim();
+            const station = loginStationSelector.value;
+
+            if (!employeeId || !station) {
+                alert("請填寫員工編號並選擇所在車站。");
+                return;
+            }
+
+            currentEmployeeId = employeeId;
+            currentStation = station;
+
+            // Update UI
+            loginScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            userInfoDiv.innerHTML = `
+                <p class="font-semibold text-gray-800">車站: <span class="font-bold text-blue-600">${currentStation}</span></p>
+                <p class="text-sm text-gray-600">員工: ${currentEmployeeId}</p>
+            `;
+
+            // Start listening for notifications for the logged-in station
+            listenForNotifications();
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (!currentStation) {
+                alert("發生錯誤，請重新登入！");
+                return;
+            }
+            
+            const arrivalTime = `${arrivalHourSelector.value}:${arrivalMinuteSelector.value}`;
+            const carPos = `${document.getElementById('carNumber').value}-${document.getElementById('doorNumber').value}`;
+
+            const newNotification = {
+                startStation: currentStation,
+                endStation: document.getElementById('endStation').value,
+                arrivalTime: arrivalTime,
+                carPosition: carPos,
+                passengerFeatures: document.getElementById('passengerFeatures').value,
+                status: 'pending', // pending, acknowledged, completed
+                createdAt: serverTimestamp(),
+                createdBy: currentEmployeeId, // Track who created it
+            };
+
+            try {
+                await addDoc(collection(db, "mrt_notifications"), newNotification);
+                alert(`通報已成功發送至 ${newNotification.endStation} 站！`);
+                notificationForm.reset();
+                arrivalHourSelector.value = "00";
+                arrivalMinuteSelector.value = "00";
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alert("通報發送失敗，請檢查網路連線。");
+            }
+        }
+        
+        function listenForNotifications() {
+            if (!currentStation) return;
+
+            const q = query(
+                collection(db, "mrt_notifications"), 
+                where("endStation", "==", currentStation),
+                where("status", "!=", "completed")
+            );
+
+            onSnapshot(q, (snapshot) => {
+                const activeNotifications = [];
+                snapshot.forEach(doc => {
+                    activeNotifications.push({ id: doc.id, ...doc.data() });
+                });
+                
+                activeNotifications.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+
+                renderNotifications(activeNotifications);
+                updateAlerts(activeNotifications);
+            }, (error) => {
+                console.error("Error listening to notifications:", error);
+                alert("無法監聽通報，請重新整理頁面。");
+            });
+        }
+
+        // --- Rendering Logic ---
+        function renderNotifications(notifications) {
+            notificationsList.innerHTML = ''; 
+
+            if (notifications.length === 0) {
+                notificationsList.appendChild(noNotificationsMessage);
+                return;
+            }
+
+            notifications.forEach(notif => {
+                const card = createNotificationCard(notif);
+                notificationsList.appendChild(card);
+            });
+        }
+
+        function createNotificationCard(notif) {
+            const card = document.createElement('div');
+            card.className = 'bg-white p-5 rounded-lg shadow transition-all duration-300';
+            
+            let statusText, statusColor, borderColor;
+            switch (notif.status) {
+                case 'pending':
+                    statusText = '待確認';
+                    statusColor = 'text-red-600';
+                    borderColor = 'border-red-500';
+                    card.classList.add('pulse-alert');
+                    break;
+                case 'acknowledged':
+                    statusText = '已確認';
+                    statusColor = 'text-green-600';
+                    borderColor = 'border-green-500';
+                    break;
+                default:
+                    statusText = '未知';
+                    statusColor = 'text-gray-500';
+                    borderColor = 'border-gray-300';
+            }
+            card.classList.add('border-l-4', borderColor);
+
+            const creationDate = notif.createdAt?.toDate();
+            // Ensure time is displayed in 24-hour format
+            const timeString = creationDate ? creationDate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'N/A';
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-bold text-lg">
+                            <span class="text-gray-500">從</span> ${notif.startStation} <span class="text-gray-500">站</span>
+                        </h3>
+                        <p class="text-sm text-gray-500">通報時間: ${timeString}</p>
+                    </div>
+                    <span class="font-bold py-1 px-3 rounded-full text-sm ${statusColor} bg-gray-200">${statusText}</span>
+                </div>
+                <div class="mt-4 space-y-2">
+                    <p><strong>預計抵達時間:</strong> <span class="text-xl font-mono">${notif.arrivalTime}</span></p>
+                    <p><strong>車廂位置:</strong> <span class="text-xl font-mono">${notif.carPosition}</span></p>
+                    <p><strong>旅客特徵:</strong></p>
+                    <p class="bg-gray-100 p-2 rounded">${notif.passengerFeatures}</p>
+                </div>
+                <div class="mt-4 flex space-x-2">
+                    ${notif.status === 'pending' ? `<button data-id="${notif.id}" class="btn-ack w-full bg-yellow-500 text-white font-bold py-2 px-4 rounded-md hover:bg-yellow-600">確認接收</button>` : ''}
+                    ${notif.status === 'acknowledged' ? `<button data-id="${notif.id}" class="btn-complete w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">完成引導</button>` : ''}
+                </div>
+            `;
+
+            const ackButton = card.querySelector('.btn-ack');
+            if (ackButton) {
+                ackButton.addEventListener('click', async () => {
+                    const docRef = doc(db, "mrt_notifications", notif.id);
+                    await updateDoc(docRef, { 
+                        status: "acknowledged",
+                        acknowledgedBy: currentEmployeeId // Track who acknowledged it
+                    });
+                });
+            }
+
+            const completeButton = card.querySelector('.btn-complete');
+            if (completeButton) {
+                completeButton.addEventListener('click', () => {
+                    showConfirmModal('確定要將此任務標示為完成嗎？', async () => {
+                        const docRef = doc(db, "mrt_notifications", notif.id);
+                        await updateDoc(docRef, { 
+                            status: "completed",
+                            completedBy: currentEmployeeId // Track who completed it
+                        });
+                    });
+                });
+            }
+
+            return card;
+        }
+        
+        // --- Modal & Alerting Logic ---
+        function showConfirmModal(text, onConfirm) {
+            confirmModalText.textContent = text;
+            confirmCallback = onConfirm;
+            confirmModal.classList.remove('hidden');
+        }
+
+        function updateAlerts(notifications) {
+            const currentPendingIds = new Set(notifications.filter(n => n.status === 'pending').map(n => n.id));
+
+            for (const [id, intervalId] of pendingAlerts.entries()) {
+                if (!currentPendingIds.has(id)) {
+                    clearInterval(intervalId);
+                    pendingAlerts.delete(id);
+                }
+            }
+
+            for (const id of currentPendingIds) {
+                if (!pendingAlerts.has(id)) {
+                    const triggerAlert = () => showAlertModal(id);
+                    triggerAlert();
+                    const intervalId = setInterval(triggerAlert, 30000);
+                    pendingAlerts.set(id, intervalId);
+                }
+            }
+            
+            if (pendingAlerts.size === 0) {
+                hideAlertModal();
+            }
+        }
+
+        function showAlertModal(notificationId) {
+            const notifCard = Array.from(notificationsList.children).find(child => child.querySelector(`[data-id="${notificationId}"]`));
+            const startStationText = notifCard ? notifCard.querySelector('h3').innerText.match(/從 (A\d+a?)/)[1] : '遠端';
+            modalText.textContent = `您有來自 ${startStationText} 站的新引導任務，請立即確認！`;
+            alertModal.classList.remove('hidden');
+            alertSound.play().catch(e => console.log("Audio play failed. User interaction might be needed."));
+        }
+
+        function hideAlertModal() {
+            alertModal.classList.add('hidden');
+            alertSound.pause();
+            alertSound.currentTime = 0;
+        }
+
+        // --- Start the app ---
+        document.addEventListener('DOMContentLoaded', initializeAppLogic);
+
+    </script>
+</body>
+</html>
